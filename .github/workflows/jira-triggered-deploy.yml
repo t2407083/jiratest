@@ -1,0 +1,71 @@
+name: Deploy from Jira Transition
+on:
+  repository_dispatch:
+    types: [jira_transition]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Deploy Application
+        run: |
+          echo "Deploying application..."
+          if [ "$((RANDOM % 2))" -eq 0 ]; then
+            echo "Deployment Successful"
+            echo "STATUS=success" >> $GITHUB_ENV
+          else
+            echo "Deployment Failed"
+            echo "STATUS=failure" >> $GITHUB_ENV
+            exit 1
+          fi
+
+      - name: Update Jira on Success
+        if: success()
+        run: |
+          curl -X PUT \
+          --url "https://jira.example.com/rest/api/2/issue/${{ github.event.client_payload.issue }}" \
+          --header "Content-Type: application/json" \
+          --user "${{ secrets.JIRA_USER }}:${{ secrets.JIRA_PASSWORD }}" \
+          --data '{
+            "fields": {
+              "status": {
+                "name": "Deployed"
+              }
+            },
+            "update": {
+              "comment": [
+                {
+                  "add": {
+                    "body": "✅ Deployment successful! [Run Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+                  }
+                }
+              ]
+            }
+          }'
+
+      - name: Update Jira on Failure
+        if: failure()
+        run: |
+          curl -X PUT \
+          --url "https://jira.example.com/rest/api/2/issue/${{ github.event.client_payload.issue }}" \
+          --header "Content-Type: application/json" \
+          --user "${{ secrets.JIRA_USER }}:${{ secrets.JIRA_PASSWORD }}" \
+          --data '{
+            "fields": {
+              "status": {
+                "name": "Deploy Failed"
+              }
+            },
+            "update": {
+              "comment": [
+                {
+                  "add": {
+                    "body": "❌ Deployment failed! [Run Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+                  }
+                }
+              ]
+            }
+          }'
