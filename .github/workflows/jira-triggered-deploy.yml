@@ -12,17 +12,15 @@ jobs:
 
       - name: Deploy Application
         run: |
-          echo "Deploying application..."
+          echo "Deploying for Issue ${{ github.event.client_payload.issue }}"
           if [ "$((RANDOM % 2))" -eq 0 ]; then
-            echo "Deployment Successful"
-            echo "STATUS=success" >> $GITHUB_ENV
+            echo "✅ Deployment Successful"
           else
-            echo "Deployment Failed"
-            echo "STATUS=failure" >> $GITHUB_ENV
+            echo "❌ Deployment Failed"
             exit 1
           fi
 
-      - name: Update Jira on Success
+      - name: Update Jira Issue (Success)
         if: success()
         run: |
           curl -X PUT \
@@ -31,39 +29,13 @@ jobs:
           --user "${{ secrets.JIRA_USER }}:${{ secrets.JIRA_PASSWORD }}" \
           --data '{
             "fields": {
-              "status": {
-                "name": "Deployed"
-              }
+              "status": { "name": "Deployed" }
             },
             "update": {
               "comment": [
                 {
                   "add": {
-                    "body": "✅ Deployment successful! [Run Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-                  }
-                }
-              ]
-            }
-          }'
-
-      - name: Update Jira on Failure
-        if: failure()
-        run: |
-          curl -X PUT \
-          --url "https://jira.example.com/rest/api/2/issue/${{ github.event.client_payload.issue }}" \
-          --header "Content-Type: application/json" \
-          --user "${{ secrets.JIRA_USER }}:${{ secrets.JIRA_PASSWORD }}" \
-          --data '{
-            "fields": {
-              "status": {
-                "name": "Deploy Failed"
-              }
-            },
-            "update": {
-              "comment": [
-                {
-                  "add": {
-                    "body": "❌ Deployment failed! [Run Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+                    "body": "✅ Deployment successful for ${{ github.event.client_payload.issue }}."
                   }
                 }
               ]
