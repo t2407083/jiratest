@@ -20,22 +20,42 @@ jobs:
             exit 1
           fi
 
+      # 배포 성공 시 Jira 상태 업데이트
       - name: Update Jira Issue (Success)
         if: success()
         run: |
-          curl -X PUT \
-          --url "https://jira.example.com/rest/api/2/issue/${{ github.event.client_payload.issue }}" \
+          curl -X POST \
+          --url "https://jira.example.com/rest/api/2/issue/${{ github.event.client_payload.issue }}/transitions" \
           --header "Content-Type: application/json" \
           --user "${{ secrets.JIRA_USER }}:${{ secrets.JIRA_PASSWORD }}" \
           --data '{
-            "fields": {
-              "status": { "name": "Deployed" }
-            },
+            "transition": { "id": "121" },
             "update": {
               "comment": [
                 {
                   "add": {
                     "body": "✅ Deployment successful for ${{ github.event.client_payload.issue }}."
+                  }
+                }
+              ]
+            }
+          }'
+
+      # 배포 실패 시 Jira 상태 업데이트
+      - name: Update Jira Issue (Failure)
+        if: failure()
+        run: |
+          curl -X POST \
+          --url "https://jira.example.com/rest/api/2/issue/${{ github.event.client_payload.issue }}/transitions" \
+          --header "Content-Type: application/json" \
+          --user "${{ secrets.JIRA_USER }}:${{ secrets.JIRA_PASSWORD }}" \
+          --data '{
+            "transition": { "id": "111" },
+            "update": {
+              "comment": [
+                {
+                  "add": {
+                    "body": "❌ Deployment failed for ${{ github.event.client_payload.issue }}."
                   }
                 }
               ]
